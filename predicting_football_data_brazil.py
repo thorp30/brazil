@@ -54,10 +54,16 @@ from sklearn.ensemble import GradientBoostingClassifier
 #read in previously made csv file - work 
 # matches = pd.read_csv(r"C:\Users\tt13\football\matches_20230214.csv", index_col=0)
 
-#read in previously made csv file - home 
-matches = pd.read_csv('/Users/tom/Documents/python/football/football/matches_20230428.csv', index_col=0)
 
+# Read in historic season data for 2021 and 2022
+matches_2021 = pd.read_csv('/Users/tom/Documents/python/football/brazil/brazil_matches_2021.csv', index_col=0)
+matches_2022 = pd.read_csv('/Users/tom/Documents/python/football/brazil/brazil_matches_2022.csv', index_col=0)
 
+# Read in the matches for this season so far
+matches_2023 = pd.read_csv('/Users/tom/Documents/python/football/brazil/brazil_matches_20230502.csv', index_col=0)
+
+# Concat all 3 csv files together into 1
+matches = matches_2021.append([matches_2022,matches_2023])
 
 """
 
@@ -175,7 +181,7 @@ def rolling_averages(group, cols, new_cols):
 
 
 #Choose variables to compute rolling averages - these are taken from feature selection process rankings
-cols = ["GF", "GA", "xG_x", "Poss", "SoT", "xA", "Err" , "KP", "Cmp", "PrgP", "PPA", "Att Pen", "Clr", "Recov","Fls" ,"result_code"]
+cols = ["GF", "GA", "xGA", "xG_x", "Poss", "SoT", "xA", "Err" , "KP", "Cmp", "PrgP", "PPA", "Att Pen", "Clr", "Dist" ,"Recov","Fls" ,"result_code"]
 new_cols = [f"{c}_rolling" for c in cols]
 
 #Apply rolling averages to all teams grouped by Team variable
@@ -348,9 +354,9 @@ predictors = ["venue_code", "opp_code"] + new_cols
 class MissingDict(dict):
     __missing__ = lambda self, key: key
 
-map_values = {"Brighton and Hove Albion": "Brighton", "Manchester United": "Manchester Utd", "Newcastle United": "Newcastle Utd",
-              "Nottingham Forest":"Nott'ham Forest" , "Tottenham Hotspur": "Tottenham", "West Ham United": "West Ham",
-              "Wolverhampton Wanderers": "Wolves"} 
+map_values = {"America MG": "América (MG)", "Atletico Goianiense": "Atl Goianiense", "Atletico Mineiro": "Atlético Mineiro",
+              "Atletico Paranaense":"Atl Paranaense" , "Avai": "Avaí", "Botafogo RJ": "Botafogo (RJ)",
+              "Ceara": "Ceará", "Cuiaba": "Cuiabá" , "Goias": "Goiás" , "Gremio": "Grêmio" , "Sao Paulo": "São Paulo"} 
 mapping = MissingDict(**map_values)
 
 #combined["new_team"] = combined["Team"].map(mapping)
@@ -399,7 +405,7 @@ future_matches_predictors_mean_final.insert(0,"Team",team_names)
 #Bring in this weeks games (created manually externally)
 #future_fixtures = pd.read_csv(r"C:\Users\tt13\football\fixtures.csv")
 
-future_fixtures = pd.read_csv('/Users/tom/Documents/python/football/football/fixtures.csv')
+future_fixtures = pd.read_csv('/Users/tom/Documents/python/football/brazil/fixtures.csv')
 
 #convert date column into datetime 
 future_fixtures["Date"] = pd.to_datetime(future_fixtures["Date"],yearfirst=True, dayfirst=True)
@@ -422,7 +428,7 @@ future_matches_predictors_mean_final_2 = future_matches_predictors_mean_final_2.
 #Now append "new future data" to previous data. 
 
 #Take just the columns we will be using 
-matches_rolling_short = matches_rolling[['Team', 'GF_rolling', 'GA_rolling', 'xG_x_rolling', 'Poss_rolling','SoT_rolling', 'xA_rolling', 'Err_rolling', 'KP_rolling', 'Cmp_rolling','PrgP_rolling', 'PPA_rolling', 'Att Pen_rolling', 'Clr_rolling','Recov_rolling', 'Fls_rolling', 'result_code_rolling', 'Date','Opponent', 'Venue', 'venue_code', 'opp_code', 'target']]
+matches_rolling_short = matches_rolling[['Team', 'GF_rolling', 'GA_rolling', 'xG_x_rolling', 'xGA_rolling' , 'Dist_rolling' ,'Poss_rolling','SoT_rolling', 'xA_rolling', 'Err_rolling', 'KP_rolling', 'Cmp_rolling','PrgP_rolling', 'PPA_rolling', 'Att Pen_rolling', 'Clr_rolling','Recov_rolling', 'Fls_rolling', 'result_code_rolling', 'Date','Opponent', 'Venue', 'venue_code', 'opp_code', 'target']]
 
 full_matches_dataset = pd.concat([matches_rolling_short,future_matches_predictors_mean_final_2])
 
@@ -432,8 +438,8 @@ full_matches_dataset = full_matches_dataset.reset_index()
 
 #Create predicting function 
 def make_future_predictions(data, predictors):
-    train = data[data["Date"] < '2023-04-27']
-    test = data[data["Date"] > '2023-04-27']
+    train = data[data["Date"] < '2023-05-01']
+    test = data[data["Date"] > '2023-05-01']
     etc.fit(train[predictors], train["target"])
     preds = etc.predict(test[predictors])
     combined = pd.DataFrame(dict(actual=test["target"], predicted=preds), index=test.index)
@@ -444,7 +450,7 @@ def make_future_predictions(data, predictors):
 combined, error = make_future_predictions(full_matches_dataset, predictors)
 
 #Add some more useful information to the predictions for better understanding
-combined = combined.merge(full_matches_dataset[full_matches_dataset["Date"] > '2023-04-27'][["Date", "Team", "Opponent"]], left_index=True, right_index=True)
+combined = combined.merge(full_matches_dataset[full_matches_dataset["Date"] > '2023-05-01'][["Date", "Team", "Opponent"]], left_index=True, right_index=True)
 
 #Drop actual - as this has not happened
 combined = combined.drop("actual",axis=1)
@@ -473,4 +479,4 @@ for i in outcome.index:
     final_predictions.append('---------------------')
     
 final_predictions = pd.DataFrame(final_predictions)
-final_predictions.to_csv(r"final_predictions_20230428.csv")
+final_predictions.to_csv("/Users/tom/Documents/python/football/brazil/final_predictions_03052023.csv")

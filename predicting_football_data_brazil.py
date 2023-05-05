@@ -464,6 +464,8 @@ outcome = merged[(merged["predicted_x"] == 1) & (merged["predicted_y"] ==0)]
 
 outcome = outcome.reset_index()
 
+outcome['Date'] = outcome['Date'].dt.strftime('%d/%m/%Y')
+
 # Output results to text file 
 
 final_predictions =[]
@@ -471,8 +473,8 @@ final_predictions =[]
 for i in outcome.index:
     winner = outcome["Team_x"][i]
     loser = outcome["Opponent_x"][i]
-    string = f"{winner} are predicted to beat {loser} this gameweek"
-    final_predictions.append('---------------------')
+    date = outcome['Date'][i]
+    string = f"{winner} are predicted to beat {loser} on the {date}"
     final_predictions.append("")
     final_predictions.append(string)
     final_predictions.append("")
